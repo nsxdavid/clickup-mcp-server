@@ -116,25 +116,45 @@ export class ListsClient {
   }
 
   /**
-   * Create a new list from a template in a folder
+   * Create a new list from a template in a folder.
+   * The POST response from ClickUp returns `deleted: true` as an artefact —
+   * we refetch the list immediately to return its real state.
    * @param folderId The ID of the folder to create the list in
    * @param templateId The ID of the template to use
    * @param params The list parameters
-   * @returns The created list
+   * @returns The created list with real (post-creation) state
    */
   async createListFromTemplateInFolder(folderId: string, templateId: string, params: CreateListParams): Promise<List> {
-    return this.client.post(`/folder/${folderId}/list/template/${templateId}`, params);
+    const created = await this.client.post<List>(`/folder/${folderId}/list_template/${templateId}`, params);
+    if (created?.id) {
+      try {
+        return await this.getList(created.id);
+      } catch {
+        return created;
+      }
+    }
+    return created;
   }
 
   /**
-   * Create a new list from a template in a space
+   * Create a new list from a template in a space.
+   * The POST response from ClickUp returns `deleted: true` as an artefact —
+   * we refetch the list immediately to return its real state.
    * @param spaceId The ID of the space to create the list in
    * @param templateId The ID of the template to use
    * @param params The list parameters
-   * @returns The created list
+   * @returns The created list with real (post-creation) state
    */
   async createListFromTemplateInSpace(spaceId: string, templateId: string, params: CreateListParams): Promise<List> {
-    return this.client.post(`/space/${spaceId}/list/template/${templateId}`, params);
+    const created = await this.client.post<List>(`/space/${spaceId}/list_template/${templateId}`, params);
+    if (created?.id) {
+      try {
+        return await this.getList(created.id);
+      } catch {
+        return created;
+      }
+    }
+    return created;
   }
 }
 

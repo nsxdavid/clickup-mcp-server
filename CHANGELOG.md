@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- Fixed `create_list_from_template_in_folder` and `create_list_from_template_in_space` returning HTTP 404. The URL path used `/list/template/{templateId}` (with a slash) instead of `/list_template/{templateId}` (with an underscore), which is what the ClickUp API expects per the [createListFromTemplate](https://developer.clickup.com/reference/createlistfromtemplate) and [createListFromTemplateInSpace](https://developer.clickup.com/reference/createlistfromtemplateinspace) endpoints.
 
 ## [1.12.0] - 2025-04-14
 
