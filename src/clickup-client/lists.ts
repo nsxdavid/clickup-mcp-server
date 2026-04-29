@@ -136,6 +136,43 @@ export class ListsClient {
   async createListFromTemplateInSpace(spaceId: string, templateId: string, params: CreateListParams): Promise<List> {
     return this.client.post(`/space/${spaceId}/list/template/${templateId}`, params);
   }
+
+  /**
+   * List the list templates accessible to a workspace.
+   * Endpoint: GET /team/{workspace_id}/list_template
+   * @param workspaceId The workspace (team) ID
+   * @returns The list of available list templates
+   */
+  async getListTemplates(workspaceId: string): Promise<{ templates: Array<{ id: string; name: string }> }> {
+    return this.client.get(`/team/${workspaceId}/list_template`);
+  }
+
+  /**
+   * Get the custom fields defined on a list (list-level fields).
+   * @param listId The ID of the list
+   * @returns The list of custom fields with their type_config (drop_down options, etc.)
+   */
+  async getCustomFields(listId: string): Promise<{ fields: Array<any> }> {
+    return this.client.get(`/list/${listId}/field`);
+  }
+
+  /**
+   * Create a new custom field on a list.
+   * Note: ClickUp's API returns {"id": null} on success — fetch the field
+   * via getCustomFields after creation to retrieve the assigned UUID.
+   * @param listId The ID of the list
+   * @param params The custom field definition
+   * @returns API response (id may be null — refetch to get the real UUID)
+   */
+  async createCustomField(listId: string, params: CreateCustomFieldParams): Promise<{ id: string | null }> {
+    return this.client.post(`/list/${listId}/field`, params);
+  }
+}
+
+export interface CreateCustomFieldParams {
+  name: string;
+  type: 'drop_down' | 'labels' | 'text' | 'short_text' | 'number' | 'currency' | 'date' | 'checkbox' | 'url' | 'email' | 'phone' | 'rating' | 'progress' | 'users' | 'emoji' | 'location' | 'tasks' | 'manual_progress' | 'automatic_progress';
+  type_config?: any;
 }
 
 export const createListsClient = (client: ClickUpClient): ListsClient => {

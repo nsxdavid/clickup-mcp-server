@@ -170,6 +170,53 @@ export class TasksClient {
   }
 
   /**
+   * Set the value of a custom field on a task.
+   * For drop_down fields, value is the option UUID.
+   * For labels fields, value is an array of option UUIDs.
+   * For text/number/date/etc., the type-appropriate primitive.
+   * Pass null to clear the field.
+   * GOTCHA: API accepts UUIDs (or arrays of UUIDs for labels) on input but
+   * returns the option's orderindex (integer) when reading the task back.
+   * @param taskId The ID of the task
+   * @param fieldId The UUID of the custom field
+   * @param value The value to set (UUID for drop_down, array for labels, primitive otherwise, or null to clear)
+   * @returns Success message
+   */
+  async setCustomFieldValue(taskId: string, fieldId: string, value: any): Promise<{ success: boolean }> {
+    return this.client.post(`/task/${taskId}/field/${fieldId}`, { value });
+  }
+
+  /**
+   * Remove (clear) the value of a custom field on a task.
+   * Equivalent to setCustomFieldValue with value=null but uses the explicit
+   * DELETE endpoint.
+   * @param taskId The ID of the task
+   * @param fieldId The UUID of the custom field
+   * @returns Success message
+   */
+  async removeCustomFieldValue(taskId: string, fieldId: string): Promise<{ success: boolean }> {
+    return this.client.delete(`/task/${taskId}/field/${fieldId}`);
+  }
+
+  /**
+   * Move a task to another list. Uses the v3 endpoint
+   * (PUT /api/v3/workspaces/{workspace_id}/tasks/{task_id}/home_list/{list_id}).
+   * Note: only root tasks can be moved — sub-tasks must be promoted to root first.
+   * @param workspaceId The workspace (team) ID
+   * @param taskId The ID of the task to move
+   * @param listId The ID of the destination list
+   * @returns The moved task
+   */
+  async moveTaskToList(workspaceId: string, taskId: string, listId: string): Promise<Task> {
+    const axiosInstance = this.client.getAxiosInstance();
+    const response = await axiosInstance.put(
+      `https://api.clickup.com/api/v3/workspaces/${workspaceId}/tasks/${taskId}/home_list/${listId}`,
+      {}
+    );
+    return response.data;
+  }
+
+  /**
    * Get subtasks of a specific task
    * @param taskId The ID of the task to get subtasks for
    * @returns A list of subtasks
