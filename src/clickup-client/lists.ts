@@ -17,6 +17,7 @@ export interface CreateListParams {
 
 export interface UpdateListParams {
   name?: string;
+  content?: string;
   // ...other parameters for updating a list...
 }
 

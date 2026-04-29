@@ -52,6 +52,7 @@ export interface Task {
 export interface CreateTaskParams {
   name: string;
   description?: string;
+  markdown_description?: string;
   assignees?: number[];
   tags?: string[];
   status?: string;
@@ -64,6 +65,7 @@ export interface CreateTaskParams {
   notify_all?: boolean;
   parent?: string;
   links_to?: string;
+  custom_item_id?: number;
   check_required_custom_fields?: boolean;
   custom_fields?: Array<{
     id: string;
@@ -74,6 +76,7 @@ export interface CreateTaskParams {
 export interface UpdateTaskParams {
   name?: string;
   description?: string;
+  markdown_description?: string;
   assignees?: number[];
   status?: string;
   priority?: number;
@@ -84,6 +87,8 @@ export interface UpdateTaskParams {
   start_date_time?: boolean;
   notify_all?: boolean;
   parent?: string;
+  custom_item_id?: number;
+  archived?: boolean;
   custom_fields?: Array<{
     id: string;
     value: any;
@@ -167,6 +172,34 @@ export class TasksClient {
    */
   async deleteTask(taskId: string): Promise<{ success: boolean }> {
     return this.client.delete(`/task/${taskId}`);
+  }
+
+  /**
+   * Add a dependency between two tasks.
+   * Pass exactly one of depends_on or dependency_of in the body.
+   * @param taskId The ID of the task with the dependency relationship
+   * @param body Object with either { depends_on } or { dependency_of }
+   * @returns Success message
+   */
+  async addDependency(
+    taskId: string,
+    body: { depends_on?: string; dependency_of?: string }
+  ): Promise<{ success: boolean }> {
+    return this.client.post(`/task/${taskId}/dependency`, body);
+  }
+
+  /**
+   * Remove a dependency between two tasks.
+   * Pass exactly one of depends_on or dependency_of as a query parameter.
+   * @param taskId The ID of the task with the dependency relationship
+   * @param params Object with either { depends_on } or { dependency_of }
+   * @returns Success message
+   */
+  async removeDependency(
+    taskId: string,
+    params: { depends_on?: string; dependency_of?: string }
+  ): Promise<{ success: boolean }> {
+    return this.client.delete(`/task/${taskId}/dependency`, params);
   }
 
   /**

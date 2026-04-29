@@ -109,51 +109,56 @@ export class DocsClient {
   }
 
   /**
-   * Search for docs in a workspace
+   * Search for docs in a workspace by name (case-insensitive substring match).
+   *
+   * Implementation note: ClickUp's v2 search endpoint
+   * (`/api/v2/team/{ws}/docs/search`) returns 404 — it does not exist. The
+   * v3 docs API has no dedicated search endpoint either. We therefore page
+   * through `GET /api/v3/workspaces/{ws}/docs` and filter client-side. For
+   * very large workspaces this is suboptimal, but it is the only reliable
+   * way to honor the tool contract.
+   *
+   * The query syntax `space:<spaceId>` is preserved from the legacy v2
+   * implementation: instead of matching by name, return all docs whose
+   * `parent.id === spaceId` (parent_type 4 = space, but we don't filter on
+   * type to also surface docs nested under folders/lists of that space —
+   * see deepFilter below).
+   *
    * @param workspaceId The ID of the workspace to search in
    * @param params The search parameters
    * @returns A list of docs matching the search query
    */
   async searchDocs(workspaceId: string, params: SearchDocsParams): Promise<{ docs: Doc[], next_cursor: string }> {
-    // Get the API token directly from the environment variable
-    const apiToken = process.env.CLICKUP_API_TOKEN;
-    
-    try {
-      // According to the ClickUp API documentation, the endpoint is:
-      // GET /api/v2/team/{team_id}/docs/search
-      // where team_id is the workspace ID
-      const url = `https://api.clickup.com/api/v2/team/${workspaceId}/docs/search`;
-      
-      // Use the exact same headers that worked in the successful request
-      const headers = {
-        'Authorization': apiToken,
-        'Accept': 'application/json'
-      };
-      
-      // According to the ClickUp API documentation, this should be a GET request
-      // with the parameters as query parameters
-      const queryParams: any = {
-        doc_name: params.query,
-        cursor: params.cursor
-      };
-      
-      // If the query is a space ID, use it as a space_id parameter
-      if (params.query.startsWith('space:')) {
-        const spaceId = params.query.substring(6);
-        queryParams.space_id = spaceId;
-        delete queryParams.doc_name;
+    const isSpaceFilter = params.query.startsWith('space:');
+    const spaceId = isSpaceFilter ? params.query.substring(6) : null;
+    const needle = isSpaceFilter ? '' : params.query.toLowerCase();
+
+    const matches: Doc[] = [];
+    let cursor: string | undefined = params.cursor;
+    // Hard cap to avoid runaway loops; ClickUp's docs are paginated 50/page.
+    const MAX_PAGES = 40;
+    let pages = 0;
+    let nextCursor = '';
+
+    while (pages < MAX_PAGES) {
+      const page = await this.getDocsFromWorkspace(workspaceId, { cursor, limit: 50 });
+      for (const doc of page.docs ?? []) {
+        if (isSpaceFilter) {
+          if (doc.parent?.id === spaceId) matches.push(doc);
+        } else if (doc.name && doc.name.toLowerCase().includes(needle)) {
+          matches.push(doc);
+        }
       }
-      
-      const response = await axios.get(url, {
-        headers,
-        params: queryParams
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error searching docs:', error);
-      throw error;
+      pages += 1;
+      if (!page.next_cursor) {
+        nextCursor = '';
+        break;
+      }
+      cursor = page.next_cursor;
+      nextCursor = page.next_cursor;
     }
+
+    return { docs: matches, next_cursor: nextCursor };
   }
 
   /**

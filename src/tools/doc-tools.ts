@@ -49,11 +49,11 @@ export function setupDocTools(server: McpServer): void {
   // Register search_docs tool
   server.tool(
     'search_docs',
-    'Search for docs in a ClickUp workspace using a query string. Returns matching docs with their metadata.',
+    'Search for docs in a ClickUp workspace by name (case-insensitive substring match). The query string `space:<spaceId>` returns all docs whose parent is the given space. Implementation: pages through the v3 docs endpoint and filters client-side — the v2 search endpoint returns 404 and v3 has no dedicated search endpoint.',
     {
       workspace_id: z.string().describe('The ID of the workspace to search in'),
-      query: z.string().describe('The search query'),
-      cursor: z.string().optional().describe('Cursor for pagination')
+      query: z.string().describe('Substring to match in doc names, or `space:<spaceId>` to filter by parent space'),
+      cursor: z.string().optional().describe('Cursor for pagination (passed through to the underlying v3 docs listing)')
     },
     async ({ workspace_id, query, cursor }) => {
       try {
